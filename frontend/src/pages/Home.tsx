@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import FileUpload from '../components/FileUpload';
 
 const Home: React.FC = () => {
-  const [jobDescription, setJobDescription] = useState('');
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
@@ -23,38 +21,18 @@ const Home: React.FC = () => {
       </div>
 
       {/* Main Content */}
-      <div className="py-12 bg-white">
+      <div className="py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-gray-900">
               Analyze Your Resume
             </h2>
             <p className="mt-4 text-lg text-gray-500">
-              Paste the job description and upload your resume to get instant feedback
+              Upload your resume and paste the job description to get instant feedback
             </p>
           </div>
 
-          {/* Job Description Section */}
-          <div className="mb-8">
-            <label htmlFor="jobDescription" className="block text-sm font-medium text-gray-700 mb-2">
-              Job Description
-            </label>
-            <textarea
-              id="jobDescription"
-              name="jobDescription"
-              rows={6}
-              className="shadow-sm focus:ring-primary-500 focus:border-primary-500 block w-full sm:text-sm border border-gray-300 rounded-md p-3"
-              placeholder="Paste the job description here..."
-              value={jobDescription}
-              onChange={(e) => setJobDescription(e.target.value)}
-            />
-          </div>
-
-          {/* File Upload Component */}
-          <FileUpload 
-            jobDescription={jobDescription} 
-            setJobDescription={setJobDescription}
-          />
+          <FileUpload />
         </div>
       </div>
 

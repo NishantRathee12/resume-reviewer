@@ -1,11 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CloudArrowUpIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import Results from './Results';
 
 interface FileUploadProps {
-  jobDescription: string;
-  setJobDescription: (jobDescription: string) => void;
+  // No props needed
 }
 
 interface AnalysisResult {
@@ -27,13 +26,27 @@ interface ResumeHistoryItem {
   analysisResult: AnalysisResult;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescription }) => {
+const FileUpload: React.FC<FileUploadProps> = () => {
+  const [jobDescription, setJobDescription] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
-  const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [resumeHistory, setResumeHistory] = useState<ResumeHistoryItem[]>([]);
+
+  useEffect(() => {
+    // Load history from localStorage
+    const savedHistory = localStorage.getItem('resumeHistory');
+    if (savedHistory) {
+      setResumeHistory(JSON.parse(savedHistory));
+    }
+  }, []);
+
+  useEffect(() => {
+    // Save history to localStorage whenever it changes
+    localStorage.setItem('resumeHistory', JSON.stringify(resumeHistory));
+  }, [resumeHistory]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -83,23 +96,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
 
     setIsAnalyzing(true);
     setError(null);
+    setAnalysisResult(null); // Clear previous results
 
     const formData = new FormData();
     formData.append('resume', file);
     formData.append('job_description', jobDescription);
 
     try {
+      console.log('Sending request to:', `${process.env.REACT_APP_API_URL}/analyze`);
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      if (response.data) {
+      console.log('Response:', response.data);
+
+      if (response.data && typeof response.data === 'object') {
+        // Validate response data
+        const requiredFields = ['overallMatch', 'technicalSkills', 'softSkills', 'education', 'experience'];
+        const missingFields = requiredFields.filter(field => !(field in response.data));
+        
+        if (missingFields.length > 0) {
+          throw new Error(`Invalid response: missing fields ${missingFields.join(', ')}`);
+        }
+
         setAnalysisResult(response.data);
-        // Clear file and job description after successful analysis
-        setFile(null);
-        setJobDescription('');
 
         // Add to history
         const historyItem: ResumeHistoryItem = {
@@ -109,8 +131,16 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
           analysisResult: response.data
         };
         setResumeHistory(prev => [historyItem, ...prev]);
+
+        // Clear form
+        setFile(null);
+        setJobDescription('');
+        const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
       } else {
-        throw new Error('Invalid response from server');
+        throw new Error('Invalid response format from server');
       }
 
     } catch (error: any) {
@@ -119,101 +149,146 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
       
       if (error.response) {
         errorMessage = error.response.data?.detail || errorMessage;
+        console.error('Error response:', error.response);
       } else if (error.request) {
         errorMessage = 'Could not connect to the server. Please try again.';
+        console.error('Error request:', error.request);
       } else {
         errorMessage = error.message || errorMessage;
       }
       
       setError(errorMessage);
+      setAnalysisResult(null);
     } finally {
       setIsAnalyzing(false);
     }
   };
 
-  const handleHistorySelect = (id: string) => {
-    const item = resumeHistory.find(item => item.id === id);
-    if (item) {
-      setAnalysisResult(item.analysisResult);
-    }
-  };
-
-  const resetForm = () => {
+  const resetForm = useCallback(() => {
     setFile(null);
     setJobDescription('');
     setAnalysisResult(null);
     setError(null);
     setIsDragging(false);
+    setIsAnalyzing(false);
+    
     // Reset the file input
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     if (fileInput) {
       fileInput.value = '';
     }
-  };
+  }, []);
 
-  const deleteHistoryItem = (id: string) => {
+  const handleHistorySelect = useCallback((id: string) => {
+    const item = resumeHistory.find(item => item.id === id);
+    if (item) {
+      setAnalysisResult(item.analysisResult);
+    }
+  }, [resumeHistory]);
+
+  const deleteHistoryItem = useCallback((id: string) => {
     setResumeHistory(prev => prev.filter(item => item.id !== id));
-  };
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto p-4">
       {/* Main Upload Form */}
       <div className="space-y-6">
         {!analysisResult ? (
-          <div
-            className={`relative flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
-              isDragging
-                ? 'border-primary-500 bg-primary-50'
-                : 'border-gray-300 bg-white'
-            }`}
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-          >
-            <div className="space-y-1 text-center">
-              <input
-                type="file"
-                className="hidden"
-                onChange={handleFileInput}
-                accept=".pdf,.doc,.docx"
-                id="file-upload"
-              />
-              <label
-                htmlFor="file-upload"
-                className="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
-              >
-                <div className="flex flex-col items-center">
-                  {!file ? (
-                    <>
-                      <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
-                      <p className="mt-4 text-lg font-medium text-gray-900">
-                        Drag and drop your resume
-                      </p>
-                      <p className="mt-2 text-sm text-gray-500">
-                        or click to select a file
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Supported formats: PDF, DOC, DOCX
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <DocumentTextIcon className="w-12 h-12 text-primary-500" />
-                      <p className="mt-4 text-lg font-medium text-gray-900">
-                        {file.name}
-                      </p>
-                      <p className="mt-2 text-sm text-gray-500">
-                        {(file.size / (1024 * 1024)).toFixed(2)} MB
-                      </p>
-                    </>
-                  )}
-                </div>
-              </label>
+          <>
+            <div
+              className={`relative flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
+                isDragging
+                  ? 'border-primary-500 bg-primary-50'
+                  : 'border-gray-300 bg-white'
+              }`}
+              onDragEnter={handleDrag}
+              onDragLeave={handleDrag}
+              onDragOver={handleDrag}
+              onDrop={handleDrop}
+            >
+              <div className="space-y-1 text-center">
+                <input
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileInput}
+                  accept=".pdf,.doc,.docx"
+                  id="file-upload"
+                />
+                <label
+                  htmlFor="file-upload"
+                  className="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
+                >
+                  <div className="flex flex-col items-center">
+                    {!file ? (
+                      <>
+                        <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
+                        <p className="mt-4 text-lg font-medium text-gray-900">
+                          Drag and drop your resume
+                        </p>
+                        <p className="mt-2 text-sm text-gray-500">
+                          or click to select a file
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Supported formats: PDF, DOC, DOCX
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <DocumentTextIcon className="w-12 h-12 text-primary-500" />
+                        <p className="mt-4 text-lg font-medium text-gray-900">
+                          {file.name}
+                        </p>
+                        <p className="mt-2 text-sm text-gray-500">
+                          {(file.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </label>
+              </div>
             </div>
-          </div>
+
+            <div className="mt-4">
+              <label htmlFor="job-description" className="block text-sm font-medium text-gray-700">
+                Job Description
+              </label>
+              <textarea
+                id="job-description"
+                rows={4}
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                placeholder="Paste the job description here..."
+                value={jobDescription}
+                onChange={(e) => setJobDescription(e.target.value)}
+              />
+            </div>
+
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={handleSubmit}
+                disabled={!file || !jobDescription.trim() || isAnalyzing}
+                className={`px-4 py-2 rounded-md text-white font-medium ${
+                  !file || !jobDescription.trim() || isAnalyzing
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-primary-600 hover:bg-primary-700'
+                }`}
+              >
+                {isAnalyzing ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Analyzing...
+                  </span>
+                ) : (
+                  'Analyze Resume'
+                )}
+              </button>
+            </div>
+          </>
         ) : (
-          <Results analysisResult={analysisResult} onReset={resetForm} />
+          <Results analysisResult={analysisResult} onReset={resetForm} isLoading={isAnalyzing} />
         )}
 
         {error && (
@@ -229,22 +304,6 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
                 <p className="text-sm text-red-700 mt-1">{error}</p>
               </div>
             </div>
-          </div>
-        )}
-
-        {!analysisResult && file && (
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={handleSubmit}
-              disabled={isAnalyzing}
-              className={`px-4 py-2 rounded-md text-white font-medium ${
-                isAnalyzing
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-primary-600 hover:bg-primary-700'
-              }`}
-            >
-              {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
-            </button>
           </div>
         )}
       </div>
