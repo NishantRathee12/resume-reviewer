@@ -13,11 +13,22 @@ interface ResultsProps {
     improvements: string[];
     skillsNeeded: string[];
   };
+  onReset: () => void;
 }
 
-const Results: React.FC<ResultsProps> = ({ analysisResult }) => {
+const Results: React.FC<ResultsProps> = ({ analysisResult, onReset }) => {
   return (
     <div className="space-y-8">
+      {/* Reset Button */}
+      <div className="flex justify-end">
+        <button
+          onClick={onReset}
+          className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
+          Analyze Another Resume
+        </button>
+      </div>
+
       {/* Overview Section */}
       <section className="bg-white p-6 rounded-lg shadow">
         <div className="flex items-center mb-4">

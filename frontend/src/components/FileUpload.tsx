@@ -194,7 +194,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
             </div>
           </div>
         ) : (
-          <Results result={analysisResult} onReset={resetForm} />
+          <Results analysisResult={analysisResult} onReset={resetForm} />
         )}
 
         {error && (
