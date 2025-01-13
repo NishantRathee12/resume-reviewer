@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, Form, HTTPException
+from fastapi import FastAPI, UploadFile, Form, HTTPException, File
 from fastapi.middleware.cors import CORSMiddleware
 import PyPDF2
 import io
@@ -20,19 +20,18 @@ app = FastAPI(title="Resume Reviewer API")
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://resume-reviewer-nishant.netlify.app",
-    "https://resume-reviewer-nishant.netlify.com",
-    "https://resume-reviewer.netlify.app",
-    "https://resume-reviewer.netlify.com",
+    "https://nishant-resume-reviewer.netlify.app",
+    "http://nishant-resume-reviewer.netlify.app",
     "http://localhost:9000"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],  # Temporarily allow all origins for testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 # Load spaCy model
@@ -191,7 +190,7 @@ async def read_root():
     return {"message": "Welcome to Resume Reviewer API"}
 
 @app.post("/analyze")
-async def analyze_resume(resume: UploadFile, jobDescription: str = Form(...)):
+async def analyze_resume(resume: UploadFile = File(...), jobDescription: str = Form(...)):
     """Analyze resume against job description."""
     try:
         logger.info(f"Processing resume: {resume.filename}")
