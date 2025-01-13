@@ -24,7 +24,7 @@ interface ResumeHistoryItem {
   id: string;
   fileName: string;
   uploadDate: string;
-  analysisResult: any;
+  analysisResult: AnalysisResult;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescription }) => {
@@ -32,7 +32,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [resumeHistory, setResumeHistory] = useState<ResumeHistoryItem[]>([]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
