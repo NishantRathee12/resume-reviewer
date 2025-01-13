@@ -20,8 +20,11 @@ app = FastAPI(title="Resume Reviewer API")
 # Configure CORS
 origins = [
     "http://localhost:3000",
-    "https://resume-reviewer.netlify.app",  # Replace with your Netlify domain
-    "https://resume-reviewer-api.onrender.com"  # Your Render domain
+    "https://resume-reviewer-nishant.netlify.app",
+    "https://resume-reviewer-nishant.netlify.com",
+    "https://resume-reviewer.netlify.app",
+    "https://resume-reviewer.netlify.com",
+    "http://localhost:9000"
 ]
 
 app.add_middleware(
