@@ -1,8 +1,7 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { CloudArrowUpIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
 import Results from './Results';
-import ResumeHistory from './ResumeHistory';
 
 interface FileUploadProps {
   jobDescription: string;
