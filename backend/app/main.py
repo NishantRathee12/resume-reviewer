@@ -74,8 +74,98 @@ def extract_text_from_docx(content: bytes) -> str:
         logger.error(f"Error processing DOCX: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error processing DOCX: {str(e)}")
 
+# Define education degree mappings and patterns
+EDUCATION_PATTERNS = {
+    'degrees': {
+        # Bachelor's degrees
+        'bachelor': [
+            'bachelor', 'bachelors', 'b.tech', 'btech', 'b.e', 'be', 'b.sc', 'bsc',
+            'bca', 'b.c.a', 'b.com', 'bcom', 'bba', 'b.b.a', 'ba', 'b.a',
+            'undergraduate', 'ug', 'bachelor of technology', 'bachelor of engineering',
+            'bachelor of science', 'bachelor of commerce', 'bachelor of arts',
+            'bachelor of business administration', 'bachelor of computer applications'
+        ],
+        # Master's degrees
+        'master': [
+            'master', 'masters', 'm.tech', 'mtech', 'm.e', 'me', 'm.sc', 'msc',
+            'mca', 'm.c.a', 'master in computer applications', 'master of computer applications',
+            'mba', 'm.b.a', 'ma', 'm.a', 'ms', 'm.s', 'm.com', 'mcom',
+            'postgraduate', 'pg', 'master of technology', 'master of engineering',
+            'master of science', 'master of commerce', 'master of arts',
+            'master of business administration'
+        ],
+        # Doctorate degrees
+        'doctorate': [
+            'phd', 'ph.d', 'doctorate', 'doctor of philosophy'
+        ],
+        # Other qualifications
+        'other': [
+            'diploma', 'certification', 'certificate', 'associate degree',
+            'professional certification', 'post graduate diploma', 'pgd', 'pg diploma'
+        ]
+    },
+    'fields': {
+        # Technology and Engineering
+        'technology': [
+            'computer science', 'information technology', 'software engineering',
+            'computer engineering', 'electronics', 'electrical', 'mechanical',
+            'civil engineering', 'data science', 'artificial intelligence',
+            'machine learning', 'robotics', 'automation', 'mechatronics',
+            'information systems', 'web development', 'mobile development',
+            'cloud computing', 'cybersecurity', 'network engineering',
+            'telecommunications', 'embedded systems'
+        ],
+        # Business and Management
+        'business': [
+            'business administration', 'management', 'finance', 'marketing',
+            'accounting', 'economics', 'human resources', 'hr management',
+            'operations management', 'supply chain management', 'project management',
+            'international business', 'entrepreneurship', 'business analytics',
+            'digital marketing', 'e-commerce'
+        ],
+        # Science and Mathematics
+        'science': [
+            'mathematics', 'physics', 'chemistry', 'biology', 'statistics',
+            'applied mathematics', 'computational science', 'environmental science',
+            'biotechnology', 'bioinformatics', 'quantum computing', 'data analytics',
+            'applied physics', 'material science'
+        ],
+        # Arts and Humanities
+        'arts': [
+            'communication', 'english', 'literature', 'journalism', 'media studies',
+            'design', 'graphic design', 'ui/ux design', 'user interface design',
+            'user experience design', 'digital media', 'content creation',
+            'technical writing', 'creative writing'
+        ]
+    },
+    'institutions': [
+        'university', 'college', 'institute', 'school', 'academy',
+        'polytechnic', 'global', 'international', 'national'
+    ],
+    'academic_terms': [
+        'cgpa', 'gpa', 'grade', 'academic', 'score', 'percentage',
+        'distinction', 'first class', 'second class', 'honors', 'honours'
+    ]
+}
+
+def normalize_education_term(term: str) -> str:
+    """Normalize education terms to standard forms."""
+    term = term.lower().strip()
+    
+    # Check degree mappings
+    for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
+        if any(var in term for var in variations):
+            return degree_type
+            
+    # Check field mappings
+    for field_type, variations in EDUCATION_PATTERNS['fields'].items():
+        if any(var in term for var in variations):
+            return field_type
+            
+    return term
+
 def extract_keywords(text: str) -> Dict[str, List[str]]:
-    """Extract important keywords from text using spaCy."""
+    """Extract important keywords from text using spaCy with improved education detection."""
     doc = nlp(text.lower())
     keywords = {
         'technical_skills': [],
@@ -84,45 +174,64 @@ def extract_keywords(text: str) -> Dict[str, List[str]]:
         'experience': []
     }
     
-    # Predefined categories
-    technical_indicators = {'programming', 'software', 'technology', 'database', 'framework', 'language', 'tool', 'system'}
-    soft_skill_indicators = {'communication', 'leadership', 'teamwork', 'problem-solving', 'analytical', 'organizational'}
-    education_indicators = {'degree', 'university', 'college', 'education', 'certification', 'bachelor', 'master', 'phd'}
-    experience_indicators = {'experience', 'work', 'job', 'position', 'role', 'project', 'achievement'}
+    # Extract education information
+    education_info = set()
+    for sent in doc.sents:
+        sent_text = sent.text.lower()
+        
+        # Check for degree patterns
+        for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
+            if any(var in sent_text for var in variations):
+                # Try to extract the complete degree phrase
+                for field_type, fields in EDUCATION_PATTERNS['fields'].items():
+                    if any(field in sent_text for field in fields):
+                        education_info.add(f"{degree_type} in {field_type}")
+                        break
+                else:
+                    education_info.add(degree_type)
+        
+        # Check for institutions
+        if any(inst in sent_text for inst in EDUCATION_PATTERNS['institutions']):
+            education_info.add(sent_text.strip())
+            
+        # Check for academic terms
+        if any(term in sent_text for term in EDUCATION_PATTERNS['academic_terms']):
+            education_info.add(sent_text.strip())
     
-    # Extract and categorize keywords
+    keywords['education'] = list(education_info)
+    
+    # Define soft skills patterns
+    soft_skills_keywords = [
+        'communication', 'leadership', 'teamwork', 'problem solving', 'analytical',
+        'time management', 'organization', 'adaptability', 'creativity', 'critical thinking',
+        'collaboration', 'interpersonal', 'presentation', 'decision making', 'flexibility',
+        'project management', 'team player', 'multitasking', 'attention to detail'
+    ]
+    
+    # Extract technical skills and experience
     for token in doc:
         if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 2:
             word = token.text.lower()
-            # Categorize based on context
-            for ancestor in token.ancestors:
-                ancestor_text = ancestor.text.lower()
-                if any(ind in ancestor_text for ind in technical_indicators):
-                    keywords['technical_skills'].append(word)
-                elif any(ind in ancestor_text for ind in soft_skill_indicators):
-                    keywords['soft_skills'].append(word)
-                elif any(ind in ancestor_text for ind in education_indicators):
-                    keywords['education'].append(word)
-                elif any(ind in ancestor_text for ind in experience_indicators):
-                    keywords['experience'].append(word)
+            
+            # Check context for technical skills
+            if any(tech in word for tech in ['programming', 'software', 'development', 'framework', 'language', 'database']):
+                keywords['technical_skills'].append(word)
+            
+            # Check for experience keywords
+            if any(exp in word for exp in ['experience', 'work', 'project', 'year']):
+                keywords['experience'].append(word)
     
-    # Extract noun phrases
-    for chunk in doc.noun_chunks:
-        if len(chunk.text) > 2:
-            chunk_text = chunk.text.lower()
-            # Categorize based on indicators
-            if any(ind in chunk_text for ind in technical_indicators):
-                keywords['technical_skills'].append(chunk_text)
-            elif any(ind in chunk_text for ind in soft_skill_indicators):
-                keywords['soft_skills'].append(chunk_text)
-            elif any(ind in chunk_text for ind in education_indicators):
-                keywords['education'].append(chunk_text)
-            elif any(ind in chunk_text for ind in experience_indicators):
-                keywords['experience'].append(chunk_text)
+    # Check for soft skills
+    for sent in doc.sents:
+        sent_text = sent.text.lower()
+        for skill in soft_skills_keywords:
+            if skill in sent_text:
+                keywords['soft_skills'].append(skill)
     
-    # Remove duplicates and get top keywords for each category
+    # Clean up and remove duplicates
     for category in keywords:
-        keywords[category] = list(set(keywords[category]))[:10]
+        keywords[category] = list(set(keywords[category]))
+        keywords[category] = [k.strip() for k in keywords[category] if len(k.strip()) > 2]
     
     return keywords
 
