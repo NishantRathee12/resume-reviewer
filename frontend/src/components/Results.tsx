@@ -36,7 +36,51 @@ const Results: React.FC<ResultsProps> = ({ analysisResult, onReset, isLoading = 
     return null;
   }
 
-  console.log('Rendering Results with:', analysisResult);
+  console.log('Rendering Results with analysisResult:', analysisResult);
+
+  // Validate required fields
+  const requiredFields = ['overallMatch', 'technicalSkills', 'softSkills', 'education', 'experience'];
+  const missingFields = requiredFields.filter(field => !(field in analysisResult));
+  
+  if (missingFields.length > 0) {
+    console.error('Missing required fields in analysisResult:', missingFields);
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Error: Invalid analysis result</p>
+        <button
+          onClick={onReset}
+          className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
+
+  // Validate score ranges
+  const scores = [
+    analysisResult.overallMatch,
+    analysisResult.technicalSkills,
+    analysisResult.softSkills,
+    analysisResult.education,
+    analysisResult.experience
+  ];
+
+  const invalidScores = scores.filter(score => typeof score !== 'number' || score < 0 || score > 100);
+  if (invalidScores.length > 0) {
+    console.error('Invalid scores detected:', invalidScores);
+    return (
+      <div className="text-center py-8">
+        <p className="text-red-600">Error: Invalid score values</p>
+        <button
+          onClick={onReset}
+          className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

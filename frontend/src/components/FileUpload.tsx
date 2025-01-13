@@ -99,18 +99,21 @@ const FileUpload: React.FC<FileUploadProps> = () => {
     setAnalysisResult(null); // Clear previous results
 
     const formData = new FormData();
-    formData.append('resume', file);
+    formData.append('resume_file', file);
     formData.append('job_description', jobDescription);
 
     try {
-      console.log('Sending request to:', `${process.env.REACT_APP_API_URL}/analyze`);
+      console.log('Starting resume analysis...');
+      console.log('File:', file.name, 'Size:', file.size);
+      console.log('Job description length:', jobDescription.length);
+      
       const response = await axios.post(`${process.env.REACT_APP_API_URL}/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
 
-      console.log('Response:', response.data);
+      console.log('API Response:', response);
 
       if (response.data && typeof response.data === 'object') {
         // Validate response data
@@ -118,9 +121,11 @@ const FileUpload: React.FC<FileUploadProps> = () => {
         const missingFields = requiredFields.filter(field => !(field in response.data));
         
         if (missingFields.length > 0) {
+          console.error('Missing fields in response:', missingFields);
           throw new Error(`Invalid response: missing fields ${missingFields.join(', ')}`);
         }
 
+        console.log('Setting analysis result:', response.data);
         setAnalysisResult(response.data);
 
         // Add to history
@@ -140,20 +145,22 @@ const FileUpload: React.FC<FileUploadProps> = () => {
           fileInput.value = '';
         }
       } else {
+        console.error('Invalid response format:', response.data);
         throw new Error('Invalid response format from server');
       }
 
     } catch (error: any) {
-      console.error('Error:', error);
+      console.error('Error during analysis:', error);
       let errorMessage = 'An error occurred while analyzing the resume';
       
       if (error.response) {
-        errorMessage = error.response.data?.detail || errorMessage;
         console.error('Error response:', error.response);
+        errorMessage = error.response.data?.detail || errorMessage;
       } else if (error.request) {
-        errorMessage = 'Could not connect to the server. Please try again.';
         console.error('Error request:', error.request);
+        errorMessage = 'Could not connect to the server. Please try again.';
       } else {
+        console.error('Error message:', error.message);
         errorMessage = error.message || errorMessage;
       }
       

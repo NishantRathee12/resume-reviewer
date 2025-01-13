@@ -414,10 +414,12 @@ async def analyze_resume(resume_file: UploadFile = File(...), job_description: s
         logger.debug(f"Job description length: {len(job_description)}")
         
         if not job_description.strip():
+            logger.error("Empty job description")
             raise HTTPException(status_code=400, detail="Job description cannot be empty")
         
         content = await resume_file.read()
         if not content:
+            logger.error("Empty resume file")
             raise HTTPException(status_code=400, detail="Resume file is empty")
         
         # Extract text based on file type
@@ -428,12 +430,14 @@ async def analyze_resume(resume_file: UploadFile = File(...), job_description: s
             elif resume_file.filename.lower().endswith('.docx'):
                 resume_text = extract_text_from_docx(content)
             else:
+                logger.error(f"Unsupported file format: {resume_file.filename}")
                 raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF or DOCX file.")
         except Exception as e:
             logger.error(f"Error extracting text from file: {str(e)}")
             raise HTTPException(status_code=400, detail=f"Could not read the file: {str(e)}")
         
         if not resume_text.strip():
+            logger.error("No text extracted from resume")
             raise HTTPException(status_code=400, detail="Could not extract text from the resume. Please make sure the file is not corrupted or empty.")
         
         logger.debug(f"Extracted text length: {len(resume_text)}")
@@ -476,6 +480,7 @@ async def analyze_resume(resume_file: UploadFile = File(...), job_description: s
                 'improvements': improvements['improvements'],
                 'skillsNeeded': improvements['skills_needed']
             }
+            logger.debug(f"Prepared response: {response}")
         except Exception as e:
             logger.error(f"Error preparing response: {str(e)}")
             raise HTTPException(status_code=500, detail="Error preparing analysis results")
@@ -484,7 +489,7 @@ async def analyze_resume(resume_file: UploadFile = File(...), job_description: s
         return response
         
     except HTTPException as he:
-        # Re-raise HTTP exceptions as they already have proper status codes
+        logger.error(f"HTTP Exception: {str(he)}")
         raise he
     except Exception as e:
         logger.error(f"Unexpected error analyzing resume: {str(e)}")
