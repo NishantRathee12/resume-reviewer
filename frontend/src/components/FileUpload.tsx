@@ -130,7 +130,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     <div>
       <div className="max-w-xl mx-auto">
         <div
-          className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md ${
+          className={`relative mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md ${
             isDragging
               ? 'border-primary-500 bg-primary-50'
               : 'border-gray-300 bg-white'
@@ -140,37 +140,45 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
           onDragOver={handleDrag}
           onDrop={handleDrop}
         >
-          <input
-            type="file"
-            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            onChange={handleFileInput}
-            accept=".pdf,.doc,.docx"
-          />
-          <div className="flex flex-col items-center">
-            {!file ? (
-              <>
-                <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
-                <p className="mt-4 text-lg font-medium text-gray-900">
-                  Drag and drop your resume here
-                </p>
-                <p className="mt-2 text-sm text-gray-500">
-                  or click to select a file
-                </p>
-                <p className="mt-1 text-xs text-gray-500">
-                  Supported formats: PDF, DOC, DOCX
-                </p>
-              </>
-            ) : (
-              <>
-                <DocumentTextIcon className="w-12 h-12 text-primary-500" />
-                <p className="mt-4 text-lg font-medium text-gray-900">
-                  {file.name}
-                </p>
-                <p className="mt-2 text-sm text-gray-500">
-                  {(file.size / (1024 * 1024)).toFixed(2)} MB
-                </p>
-              </>
-            )}
+          <div className="space-y-1 text-center">
+            <input
+              type="file"
+              className="hidden"
+              onChange={handleFileInput}
+              accept=".pdf,.doc,.docx"
+              id="file-upload"
+            />
+            <label
+              htmlFor="file-upload"
+              className="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
+            >
+              <div className="flex flex-col items-center">
+                {!file ? (
+                  <>
+                    <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
+                    <p className="mt-4 text-lg font-medium text-gray-900">
+                      Drag and drop your resume here
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      or click to select a file
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Supported formats: PDF, DOC, DOCX
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <DocumentTextIcon className="w-12 h-12 text-primary-500" />
+                    <p className="mt-4 text-lg font-medium text-gray-900">
+                      {file.name}
+                    </p>
+                    <p className="mt-2 text-sm text-gray-500">
+                      {(file.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </>
+                )}
+              </div>
+            </label>
           </div>
         </div>
 
