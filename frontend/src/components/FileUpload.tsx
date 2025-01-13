@@ -138,137 +138,133 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-        {/* Main Upload Form */}
-        <div className="md:col-span-2">
-          {!analysisResult ? (
-            <div className="space-y-6">
-              <div
-                className={`relative flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
-                  isDragging
-                    ? 'border-primary-500 bg-primary-50'
-                    : 'border-gray-300 bg-white'
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
+      {/* Main Upload Form */}
+      <div className="space-y-6">
+        {!analysisResult ? (
+          <div
+            className={`relative flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md transition-colors ${
+              isDragging
+                ? 'border-primary-500 bg-primary-50'
+                : 'border-gray-300 bg-white'
+            }`}
+            onDragEnter={handleDrag}
+            onDragLeave={handleDrag}
+            onDragOver={handleDrag}
+            onDrop={handleDrop}
+          >
+            <div className="space-y-1 text-center">
+              <input
+                type="file"
+                className="hidden"
+                onChange={handleFileInput}
+                accept=".pdf,.doc,.docx"
+                id="file-upload"
+              />
+              <label
+                htmlFor="file-upload"
+                className="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
               >
-                <div className="space-y-1 text-center">
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={handleFileInput}
-                    accept=".pdf,.doc,.docx"
-                    id="file-upload"
-                  />
-                  <label
-                    htmlFor="file-upload"
-                    className="relative cursor-pointer rounded-md font-medium text-primary-600 hover:text-primary-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary-500"
-                  >
-                    <div className="flex flex-col items-center">
-                      {!file ? (
-                        <>
-                          <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
-                          <p className="mt-4 text-lg font-medium text-gray-900">
-                            Drag and drop your resume
-                          </p>
-                          <p className="mt-2 text-sm text-gray-500">
-                            or click to select a file
-                          </p>
-                          <p className="mt-1 text-xs text-gray-500">
-                            Supported formats: PDF, DOC, DOCX
-                          </p>
-                        </>
-                      ) : (
-                        <>
-                          <DocumentTextIcon className="w-12 h-12 text-primary-500" />
-                          <p className="mt-4 text-lg font-medium text-gray-900">
-                            {file.name}
-                          </p>
-                          <p className="mt-2 text-sm text-gray-500">
-                            {(file.size / (1024 * 1024)).toFixed(2)} MB
-                          </p>
-                        </>
-                      )}
-                    </div>
-                  </label>
+                <div className="flex flex-col items-center">
+                  {!file ? (
+                    <>
+                      <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
+                      <p className="mt-4 text-lg font-medium text-gray-900">
+                        Drag and drop your resume
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        or click to select a file
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        Supported formats: PDF, DOC, DOCX
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <DocumentTextIcon className="w-12 h-12 text-primary-500" />
+                      <p className="mt-4 text-lg font-medium text-gray-900">
+                        {file.name}
+                      </p>
+                      <p className="mt-2 text-sm text-gray-500">
+                        {(file.size / (1024 * 1024)).toFixed(2)} MB
+                      </p>
+                    </>
+                  )}
                 </div>
-              </div>
-
-              {error && (
-                <div className="mt-4 text-sm text-red-600">
-                  {error}
-                </div>
-              )}
-
-              <button
-                onClick={handleSubmit}
-                disabled={!file || !jobDescription.trim() || isAnalyzing}
-                className={`w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white transition-colors ${
-                  !file || !jobDescription.trim() || isAnalyzing
-                    ? 'bg-gray-400 cursor-not-allowed'
-                    : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
-                }`}
-              >
-                {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
-              </button>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800">Analysis Results</h2>
-                <button
-                  onClick={resetForm}
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                >
-                  Analyze Another Resume
-                </button>
-              </div>
-              <Results analysisResult={analysisResult} />
-            </div>
-          )}
-        </div>
-
-        {/* Resume History Sidebar */}
-        <div className="md:col-span-1">
-          <div className="bg-white rounded-lg shadow-lg p-4">
-            <h3 className="text-lg font-semibold mb-4">Previous Uploads</h3>
-            <div className="space-y-4 max-h-[600px] overflow-y-auto">
-              {resumeHistory.map((item) => (
-                <div
-                  key={item.id}
-                  className="bg-gray-50 p-3 rounded-md border border-gray-200"
-                >
-                  <p className="font-medium text-sm truncate">{item.fileName}</p>
-                  <p className="text-xs text-gray-500 mb-2">
-                    {new Date(item.uploadDate).toLocaleDateString()}
-                  </p>
-                  <div className="flex space-x-2">
-                    <button
-                      onClick={() => handleHistorySelect(item.id)}
-                      className="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                    >
-                      View Results
-                    </button>
-                    <button
-                      onClick={() => deleteHistoryItem(item.id)}
-                      className="px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-              {resumeHistory.length === 0 && (
-                <p className="text-sm text-gray-500 text-center">
-                  No previous uploads
-                </p>
-              )}
+              </label>
             </div>
           </div>
-        </div>
+        ) : (
+          <Results result={analysisResult} onReset={resetForm} />
+        )}
+
+        {error && (
+          <div className="mt-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
+        {!analysisResult && file && (
+          <div className="mt-4 flex justify-center">
+            <button
+              onClick={handleSubmit}
+              disabled={isAnalyzing}
+              className={`px-4 py-2 rounded-md text-white font-medium ${
+                isAnalyzing
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700'
+              }`}
+            >
+              {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* Previous Uploads Section */}
+      {resumeHistory.length > 0 && (
+        <div className="mt-12 bg-white rounded-lg shadow">
+          <div className="px-4 py-5 sm:px-6">
+            <h3 className="text-lg font-medium leading-6 text-gray-900">Previous Uploads</h3>
+            <p className="mt-1 text-sm text-gray-500">View or delete your previous resume analyses</p>
+          </div>
+          <div className="border-t border-gray-200">
+            <ul className="divide-y divide-gray-200">
+              {resumeHistory.map((item) => (
+                <li key={item.id} className="px-4 py-4 sm:px-6 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
+                      <DocumentTextIcon className="h-5 w-5 text-gray-400" />
+                      <div className="ml-3">
+                        <p className="text-sm font-medium text-gray-900">{item.fileName}</p>
+                        <p className="text-sm text-gray-500">
+                          Uploaded on {new Date(item.uploadDate).toLocaleDateString()}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Match Score: {item.analysisResult.overallMatch}%
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-3">
+                      <button
+                        onClick={() => handleHistorySelect(item.id)}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+                      >
+                        View Results
+                      </button>
+                      <button
+                        onClick={() => deleteHistoryItem(item.id)}
+                        className="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
