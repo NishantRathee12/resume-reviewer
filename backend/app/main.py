@@ -407,49 +407,85 @@ async def health_check():
     return {"status": "healthy", "message": "API is running"}
 
 @app.post("/analyze")
-async def analyze_resume(resume: UploadFile = File(...), jobDescription: str = Form(...)):
+async def analyze_resume(resume: UploadFile = File(...), job_description: str = Form(...)):
     """Analyze resume against job description."""
     try:
         logger.info(f"Processing resume: {resume.filename}")
+        logger.debug(f"Job description length: {len(job_description)}")
+        
+        if not job_description.strip():
+            raise HTTPException(status_code=400, detail="Job description cannot be empty")
+        
         content = await resume.read()
+        if not content:
+            raise HTTPException(status_code=400, detail="Resume file is empty")
         
         # Extract text based on file type
-        if resume.filename.lower().endswith('.pdf'):
-            resume_text = extract_text_from_pdf(content)
-        elif resume.filename.lower().endswith('.docx'):
-            resume_text = extract_text_from_docx(content)
-        else:
-            raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF or DOCX file.")
+        resume_text = ""
+        try:
+            if resume.filename.lower().endswith('.pdf'):
+                resume_text = extract_text_from_pdf(content)
+            elif resume.filename.lower().endswith('.docx'):
+                resume_text = extract_text_from_docx(content)
+            else:
+                raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF or DOCX file.")
+        except Exception as e:
+            logger.error(f"Error extracting text from file: {str(e)}")
+            raise HTTPException(status_code=400, detail=f"Could not read the file: {str(e)}")
         
         if not resume_text.strip():
-            raise HTTPException(status_code=400, detail="Could not extract text from the resume. Please make sure the file is not corrupted.")
+            raise HTTPException(status_code=400, detail="Could not extract text from the resume. Please make sure the file is not corrupted or empty.")
+        
+        logger.debug(f"Extracted text length: {len(resume_text)}")
             
         # Extract keywords from both resume and job description
-        resume_keywords = extract_keywords(resume_text)
-        job_keywords = extract_keywords(jobDescription)
+        try:
+            resume_keywords = extract_keywords(resume_text)
+            job_keywords = extract_keywords(job_description)
+            logger.debug(f"Extracted keywords - Resume: {resume_keywords}, Job: {job_keywords}")
+        except Exception as e:
+            logger.error(f"Error extracting keywords: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error analyzing keywords from the resume and job description")
         
         # Calculate match scores
-        scores = calculate_match_scores(resume_keywords, job_keywords)
+        try:
+            scores = calculate_match_scores(resume_keywords, job_keywords)
+            logger.debug(f"Calculated scores: {scores}")
+        except Exception as e:
+            logger.error(f"Error calculating scores: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error calculating match scores")
         
         # Generate improvements
-        improvements = generate_improvements(resume_keywords, job_keywords)
+        try:
+            improvements = generate_improvements(resume_keywords, job_keywords)
+            logger.debug(f"Generated improvements: {improvements}")
+        except Exception as e:
+            logger.error(f"Error generating improvements: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error generating improvement suggestions")
         
         # Prepare response
-        response = {
-            'overallMatch': scores['overall_match'],
-            'technicalSkills': scores['technical_skills'],
-            'softSkills': scores['soft_skills'],
-            'education': scores['education'],
-            'experience': scores['experience'],
-            'matchedKeywords': [kw for cat in resume_keywords.values() for kw in cat],
-            'missingKeywords': improvements['missing_keywords'],
-            'improvements': improvements['improvements'],
-            'skillsNeeded': improvements['skills_needed']
-        }
+        try:
+            response = {
+                'overallMatch': scores['overall_match'],
+                'technicalSkills': scores['technical_skills'],
+                'softSkills': scores['soft_skills'],
+                'education': scores['education'],
+                'experience': scores['experience'],
+                'matchedKeywords': [kw for cat in resume_keywords.values() for kw in cat],
+                'missingKeywords': improvements['missing_keywords'],
+                'improvements': improvements['improvements'],
+                'skillsNeeded': improvements['skills_needed']
+            }
+        except Exception as e:
+            logger.error(f"Error preparing response: {str(e)}")
+            raise HTTPException(status_code=500, detail="Error preparing analysis results")
         
         logger.info("Successfully analyzed resume")
         return response
         
+    except HTTPException as he:
+        # Re-raise HTTP exceptions as they already have proper status codes
+        raise he
     except Exception as e:
-        logger.error(f"Error analyzing resume: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Unexpected error analyzing resume: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
