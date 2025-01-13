@@ -273,14 +273,26 @@ def extract_keywords(text: str) -> Dict[str, List[str]]:
         'collaboration', 'interpersonal', 'presentation', 'decision making', 'flexibility',
         'project management', 'team player', 'multitasking', 'attention to detail'
     ]
+
+    # Define technical skills patterns
+    technical_skills_keywords = [
+        'programming', 'software', 'development', 'framework', 'language', 'database',
+        'python', 'java', 'javascript', 'typescript', 'react', 'node', 'angular', 'vue',
+        'html', 'css', 'sql', 'nosql', 'mongodb', 'postgresql', 'mysql', 'oracle',
+        'aws', 'azure', 'cloud', 'docker', 'kubernetes', 'devops', 'ci/cd',
+        'git', 'github', 'bitbucket', 'jira', 'agile', 'scrum', 'rest', 'api',
+        'microservices', 'web services', 'testing', 'debugging', 'algorithms',
+        'data structures', 'oop', 'object oriented', 'functional programming',
+        'mobile', 'android', 'ios', 'swift', 'kotlin', 'flutter', 'react native'
+    ]
     
     # Extract technical skills and experience
     for token in doc:
         if token.pos_ in ['NOUN', 'PROPN'] and len(token.text) > 2:
             word = token.text.lower()
             
-            # Check context for technical skills
-            if any(tech in word for tech in ['programming', 'software', 'development', 'framework', 'language', 'database']):
+            # Check for technical skills
+            if any(tech.lower() in word for tech in technical_skills_keywords):
                 keywords['technical_skills'].append(word)
             
             # Check for experience keywords
@@ -298,8 +310,32 @@ def extract_keywords(text: str) -> Dict[str, List[str]]:
     for category in keywords:
         keywords[category] = list(set(keywords[category]))
         keywords[category] = [k.strip() for k in keywords[category] if len(k.strip()) > 2]
+        # Ensure each category has at least an empty list
+        if not keywords[category]:
+            keywords[category] = []
     
     return keywords
+
+def calculate_match_scores(resume_keywords: Dict[str, List[str]], job_keywords: Dict[str, List[str]]) -> Dict[str, float]:
+    """Calculate match scores for different categories."""
+    scores = {}
+    
+    for category in resume_keywords:
+        resume_set = set(resume_keywords.get(category, []))
+        job_set = set(job_keywords.get(category, []))
+        
+        if job_set:
+            match_score = len(resume_set.intersection(job_set)) / len(job_set) * 100
+        else:
+            match_score = 100  # If no requirements in job description, assume full match
+            
+        scores[category] = round(match_score, 2)
+    
+    # Calculate overall match (excluding empty categories)
+    valid_scores = [score for score in scores.values() if score is not None]
+    scores['overall_match'] = round(sum(valid_scores) / len(valid_scores), 2) if valid_scores else 0
+    
+    return scores
 
 def normalize_education_term(term: str) -> str:
     """Normalize education terms to standard forms."""
@@ -316,27 +352,6 @@ def normalize_education_term(term: str) -> str:
             return field_type
             
     return term
-
-def calculate_match_scores(resume_keywords: Dict[str, List[str]], job_keywords: Dict[str, List[str]]) -> Dict[str, float]:
-    """Calculate match scores for different categories."""
-    scores = {}
-    
-    for category in resume_keywords:
-        resume_set = set(resume_keywords[category])
-        job_set = set(job_keywords[category])
-        
-        if job_set:
-            match_score = len(resume_set.intersection(job_set)) / len(job_set) * 100
-        else:
-            match_score = 100  # If no requirements in job description, assume full match
-            
-        scores[category] = round(match_score, 2)
-    
-    # Calculate overall match
-    total_score = sum(scores.values())
-    scores['overall_match'] = round(total_score / len(scores), 2)
-    
-    return scores
 
 def generate_improvements(resume_keywords: Dict[str, List[str]], job_keywords: Dict[str, List[str]]) -> Dict[str, List[str]]:
     """Generate detailed improvement suggestions."""
