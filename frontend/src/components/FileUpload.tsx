@@ -1,15 +1,30 @@
 import React, { useCallback, useState } from 'react';
 import { CloudArrowUpIcon, DocumentTextIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
+import Results from './Results';
+import ResumeHistory from './ResumeHistory';
 
 interface FileUploadProps {
   jobDescription: string;
 }
 
 interface AnalysisResult {
-  compatibility: number;
-  keywords: string[];
-  suggestions: string[];
+  overallMatch: number;
+  technicalSkills: number;
+  experience: number;
+  education: number;
+  softSkills: number;
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  improvements: string[];
+  skillsNeeded: string[];
+}
+
+interface ResumeHistoryItem {
+  id: string;
+  fileName: string;
+  uploadDate: string;
+  overallMatch: number;
 }
 
 const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
@@ -18,6 +33,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [resumeHistory, setResumeHistory] = useState<ResumeHistoryItem[]>([]);
 
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -72,30 +88,32 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     formData.append('jobDescription', jobDescription);
 
     try {
-      console.log('Sending request to backend...');
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
       const response = await axios.post(`${API_URL}/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000, // 30 second timeout
+        timeout: 30000,
       });
-      console.log('Response received:', response.data);
-      setAnalysisResult(response.data);
+
+      const result = response.data;
+      setAnalysisResult(result);
+
+      // Add to history
+      const newHistoryItem: ResumeHistoryItem = {
+        id: Date.now().toString(),
+        fileName: file.name,
+        uploadDate: new Date().toISOString(),
+        overallMatch: result.overallMatch,
+      };
+      setResumeHistory(prev => [newHistoryItem, ...prev]);
     } catch (error: any) {
       console.error('Error analyzing resume:', error);
       if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error('Error response:', error.response.data);
         setError(`Server error: ${error.response.data.detail || 'Failed to analyze resume'}`);
       } else if (error.request) {
-        // The request was made but no response was received
-        console.error('No response received');
         setError('Could not connect to the server. Please make sure the backend is running.');
       } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error('Error setting up request:', error.message);
         setError('Error analyzing resume: ' + error.message);
       }
     } finally {
@@ -103,118 +121,91 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     }
   };
 
-  return (
-    <div className="max-w-xl mx-auto">
-      {error && (
-        <div className="mb-4 p-4 text-red-700 bg-red-100 rounded-lg">
-          {error}
-        </div>
-      )}
-      
-      <div
-        className={`relative flex flex-col items-center justify-center w-full h-64 p-6 border-2 border-dashed rounded-lg transition-colors ${
-          isDragging
-            ? 'border-primary-500 bg-primary-50'
-            : 'border-gray-300 bg-gray-50'
-        } hover:border-primary-400`}
-        onDragEnter={handleDrag}
-        onDragLeave={handleDrag}
-        onDragOver={handleDrag}
-        onDrop={handleDrop}
-      >
-        <input
-          type="file"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          onChange={handleFileInput}
-          accept=".pdf,.doc,.docx"
-        />
-        
-        <div className="flex flex-col items-center">
-          {!file ? (
-            <>
-              <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
-              <p className="mt-4 text-lg font-medium text-gray-900">
-                Drag and drop your resume here
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                or click to select a file
-              </p>
-              <p className="mt-1 text-xs text-gray-500">
-                Supported formats: PDF, DOC, DOCX
-              </p>
-            </>
-          ) : (
-            <>
-              <DocumentTextIcon className="w-12 h-12 text-primary-500" />
-              <p className="mt-4 text-lg font-medium text-gray-900">
-                {file.name}
-              </p>
-              <p className="mt-2 text-sm text-gray-500">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB
-              </p>
-            </>
-          )}
-        </div>
-      </div>
+  const handleHistorySelect = async (id: string) => {
+    // TODO: Implement loading previous analysis results
+    console.log('Loading analysis for history item:', id);
+  };
 
-      {file && (
+  return (
+    <div>
+      <div className="max-w-xl mx-auto">
+        <div
+          className={`mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed rounded-md ${
+            isDragging
+              ? 'border-primary-500 bg-primary-50'
+              : 'border-gray-300 bg-white'
+          }`}
+          onDragEnter={handleDrag}
+          onDragLeave={handleDrag}
+          onDragOver={handleDrag}
+          onDrop={handleDrop}
+        >
+          <input
+            type="file"
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            onChange={handleFileInput}
+            accept=".pdf,.doc,.docx"
+          />
+          <div className="flex flex-col items-center">
+            {!file ? (
+              <>
+                <CloudArrowUpIcon className="w-12 h-12 text-gray-400" />
+                <p className="mt-4 text-lg font-medium text-gray-900">
+                  Drag and drop your resume here
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  or click to select a file
+                </p>
+                <p className="mt-1 text-xs text-gray-500">
+                  Supported formats: PDF, DOC, DOCX
+                </p>
+              </>
+            ) : (
+              <>
+                <DocumentTextIcon className="w-12 h-12 text-primary-500" />
+                <p className="mt-4 text-lg font-medium text-gray-900">
+                  {file.name}
+                </p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {(file.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div className="mt-4 text-sm text-red-600">
+            {error}
+          </div>
+        )}
+
         <button
           onClick={handleSubmit}
-          disabled={isAnalyzing || !jobDescription.trim()}
-          className={`w-full mt-4 px-4 py-2 text-sm font-medium text-white rounded-md ${
-            isAnalyzing || !jobDescription.trim()
+          disabled={!file || !jobDescription.trim() || isAnalyzing}
+          className={`mt-4 w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white ${
+            !file || !jobDescription.trim() || isAnalyzing
               ? 'bg-gray-400 cursor-not-allowed'
-              : 'bg-primary-600 hover:bg-primary-700'
+              : 'bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500'
           }`}
         >
           {isAnalyzing ? 'Analyzing...' : 'Analyze Resume'}
         </button>
+      </div>
+
+      {/* Results Section */}
+      {analysisResult && (
+        <div className="mt-8">
+          <Results analysisResult={analysisResult} />
+        </div>
       )}
 
-      {analysisResult && (
-        <div className="mt-8 p-6 bg-white rounded-lg shadow">
-          <h3 className="text-lg font-medium text-gray-900 mb-4">Analysis Results</h3>
-          
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium text-gray-700">Compatibility Score</span>
-              <span className="text-sm font-medium text-primary-600">
-                {analysisResult.compatibility}%
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-primary-600 h-2 rounded-full"
-                style={{ width: `${analysisResult.compatibility}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="mb-4">
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Matched Keywords</h4>
-            <div className="flex flex-wrap gap-2">
-              {analysisResult.keywords.map((keyword, index) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-                >
-                  {keyword}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Suggestions</h4>
-            <ul className="list-disc list-inside space-y-1">
-              {analysisResult.suggestions.map((suggestion, index) => (
-                <li key={index} className="text-sm text-gray-600">
-                  {suggestion}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
+      {/* Resume History Section */}
+      {resumeHistory.length > 0 && (
+        <ResumeHistory
+          history={resumeHistory}
+          onSelect={handleHistorySelect}
+        />
       )}
     </div>
   );
