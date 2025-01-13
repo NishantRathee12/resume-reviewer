@@ -88,27 +88,31 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     formData.append('jobDescription', jobDescription);
 
     try {
-      // First test if the API is available
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
       
+      // Check API health first
       try {
-        const testResponse = await axios.get(`${API_URL}/test`);
-        console.log('API Test Response:', testResponse.data);
+        const healthCheck = await axios.get(`${API_URL}/health`);
+        console.log('API Health Check:', healthCheck.data);
+        if (healthCheck.data.status !== 'healthy') {
+          throw new Error('API is not healthy');
+        }
       } catch (error) {
-        console.error('API Test Failed:', error);
+        console.error('API Health Check Failed:', error);
         throw new Error('Could not connect to the API. Please try again later.');
       }
 
-      // If test passes, proceed with analysis
+      // Proceed with analysis
       const response = await axios.post(`${API_URL}/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
-        timeout: 30000,
+        timeout: 60000, // Increased timeout to 60 seconds
       });
 
       const result = response.data;
       setAnalysisResult(result);
+      setError(null);
 
       // Add to history
       const newHistoryItem: ResumeHistoryItem = {
@@ -121,10 +125,14 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     } catch (error: any) {
       console.error('Error analyzing resume:', error);
       if (error.response) {
-        setError(`Server error: ${error.response.data.detail || 'Failed to analyze resume'}`);
+        // Server returned an error
+        const errorMessage = error.response.data.detail || 'Failed to analyze resume';
+        setError(`Server error: ${errorMessage}`);
       } else if (error.request) {
-        setError('Could not connect to the server. Please make sure the backend is running.');
+        // Request was made but no response
+        setError('Could not connect to the server. Please check if the backend is running.');
       } else {
+        // Something else went wrong
         setError(error.message || 'Error analyzing resume');
       }
     } finally {

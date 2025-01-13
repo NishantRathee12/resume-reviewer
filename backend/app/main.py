@@ -1,5 +1,6 @@
 from fastapi import FastAPI, UploadFile, Form, HTTPException, File
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import PyPDF2
 import io
 from typing import List, Dict
@@ -18,21 +19,20 @@ logger = logging.getLogger(__name__)
 app = FastAPI(title="Resume Reviewer API")
 
 # Configure CORS
-origins = [
-    "http://localhost:3000",
-    "https://nishant-resume-reviewer.netlify.app",
-    "http://nishant-resume-reviewer.netlify.app",
-    "http://localhost:9000"
-]
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporarily allow all origins for testing
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={"detail": str(exc)},
+    )
 
 # Load spaCy model
 try:
@@ -195,6 +195,11 @@ async def read_root():
     """Root endpoint."""
     return {"message": "Welcome to Resume Reviewer API"}
 
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {"status": "healthy", "message": "API is running"}
+
 @app.post("/analyze")
 async def analyze_resume(resume: UploadFile = File(...), jobDescription: str = Form(...)):
     """Analyze resume against job description."""
@@ -203,13 +208,16 @@ async def analyze_resume(resume: UploadFile = File(...), jobDescription: str = F
         content = await resume.read()
         
         # Extract text based on file type
-        if resume.filename.endswith('.pdf'):
+        if resume.filename.lower().endswith('.pdf'):
             resume_text = extract_text_from_pdf(content)
-        elif resume.filename.endswith('.docx'):
+        elif resume.filename.lower().endswith('.docx'):
             resume_text = extract_text_from_docx(content)
         else:
-            raise HTTPException(status_code=400, detail="Unsupported file format")
+            raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF or DOCX file.")
         
+        if not resume_text.strip():
+            raise HTTPException(status_code=400, detail="Could not extract text from the resume. Please make sure the file is not corrupted.")
+            
         # Extract keywords from both resume and job description
         resume_keywords = extract_keywords(resume_text)
         job_keywords = extract_keywords(jobDescription)
