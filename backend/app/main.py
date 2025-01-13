@@ -185,8 +185,14 @@ def generate_improvements(resume_keywords: Dict[str, List[str]], job_keywords: D
     
     return improvements
 
+@app.get("/test")
+async def test_endpoint():
+    """Test endpoint to verify API is running."""
+    return {"status": "ok", "message": "API is running"}
+
 @app.get("/")
 async def read_root():
+    """Root endpoint."""
     return {"message": "Welcome to Resume Reviewer API"}
 
 @app.post("/analyze")

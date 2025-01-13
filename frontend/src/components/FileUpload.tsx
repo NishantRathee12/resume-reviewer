@@ -88,7 +88,18 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
     formData.append('jobDescription', jobDescription);
 
     try {
+      // First test if the API is available
       const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
+      
+      try {
+        const testResponse = await axios.get(`${API_URL}/test`);
+        console.log('API Test Response:', testResponse.data);
+      } catch (error) {
+        console.error('API Test Failed:', error);
+        throw new Error('Could not connect to the API. Please try again later.');
+      }
+
+      // If test passes, proceed with analysis
       const response = await axios.post(`${API_URL}/analyze`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -114,7 +125,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription }) => {
       } else if (error.request) {
         setError('Could not connect to the server. Please make sure the backend is running.');
       } else {
-        setError('Error analyzing resume: ' + error.message);
+        setError(error.message || 'Error analyzing resume');
       }
     } finally {
       setIsAnalyzing(false);
