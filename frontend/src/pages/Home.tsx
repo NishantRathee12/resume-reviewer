@@ -51,7 +51,10 @@ const Home: React.FC = () => {
           </div>
 
           {/* File Upload Component */}
-          <FileUpload jobDescription={jobDescription} />
+          <FileUpload 
+            jobDescription={jobDescription} 
+            setJobDescription={setJobDescription}
+          />
         </div>
       </div>
 
