@@ -85,7 +85,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
     setError(null);
 
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('resume', file);
     formData.append('job_description', jobDescription);
 
     try {
@@ -97,6 +97,9 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
 
       if (response.data) {
         setAnalysisResult(response.data);
+        // Clear file and job description after successful analysis
+        setFile(null);
+        setJobDescription('');
 
         // Add to history
         const historyItem: ResumeHistoryItem = {
@@ -114,15 +117,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
       console.error('Error:', error);
       let errorMessage = 'An error occurred while analyzing the resume';
       
-      // Handle different types of errors
       if (error.response) {
-        // Server responded with an error
         errorMessage = error.response.data?.detail || errorMessage;
       } else if (error.request) {
-        // Request was made but no response
         errorMessage = 'Could not connect to the server. Please try again.';
       } else {
-        // Other errors
         errorMessage = error.message || errorMessage;
       }
       
@@ -144,7 +143,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ jobDescription, setJobDescripti
     setJobDescription('');
     setAnalysisResult(null);
     setError(null);
-    setIsAnalyzing(false);
+    setIsDragging(false);
     // Reset the file input
     const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
     if (fileInput) {

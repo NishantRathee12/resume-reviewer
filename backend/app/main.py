@@ -407,25 +407,25 @@ async def health_check():
     return {"status": "healthy", "message": "API is running"}
 
 @app.post("/analyze")
-async def analyze_resume(resume: UploadFile = File(...), job_description: str = Form(...)):
+async def analyze_resume(resume_file: UploadFile = File(...), job_description: str = Form(...)):
     """Analyze resume against job description."""
     try:
-        logger.info(f"Processing resume: {resume.filename}")
+        logger.info(f"Processing resume: {resume_file.filename}")
         logger.debug(f"Job description length: {len(job_description)}")
         
         if not job_description.strip():
             raise HTTPException(status_code=400, detail="Job description cannot be empty")
         
-        content = await resume.read()
+        content = await resume_file.read()
         if not content:
             raise HTTPException(status_code=400, detail="Resume file is empty")
         
         # Extract text based on file type
         resume_text = ""
         try:
-            if resume.filename.lower().endswith('.pdf'):
+            if resume_file.filename.lower().endswith('.pdf'):
                 resume_text = extract_text_from_pdf(content)
-            elif resume.filename.lower().endswith('.docx'):
+            elif resume_file.filename.lower().endswith('.docx'):
                 resume_text = extract_text_from_docx(content)
             else:
                 raise HTTPException(status_code=400, detail="Unsupported file format. Please upload a PDF or DOCX file.")
