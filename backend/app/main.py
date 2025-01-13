@@ -74,95 +74,184 @@ def extract_text_from_docx(content: bytes) -> str:
         logger.error(f"Error processing DOCX: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error processing DOCX: {str(e)}")
 
-# Define education degree mappings and patterns
+def generate_case_variations(base_terms):
+    """Generate all possible case variations for a list of terms."""
+    variations = set()
+    for term in base_terms:
+        # Original term
+        variations.add(term)
+        # Uppercase
+        variations.add(term.upper())
+        # Lowercase
+        variations.add(term.lower())
+        # Title case
+        variations.add(term.title())
+        
+        # Handle dot variations
+        if '.' in term:
+            # Remove all dots
+            no_dots = term.replace('.', '')
+            variations.add(no_dots)
+            variations.add(no_dots.upper())
+            variations.add(no_dots.lower())
+            variations.add(no_dots.title())
+            
+            # Add space after dots
+            spaced_dots = term.replace('.', '. ')
+            variations.add(spaced_dots)
+            variations.add(spaced_dots.upper())
+            variations.add(spaced_dots.lower())
+            variations.add(spaced_dots.title())
+            
+            # Add space between letters
+            if len(term) <= 5:  # Only for short abbreviations
+                spaced = ' '.join(term.replace('.', ''))
+                variations.add(spaced)
+                variations.add(spaced.upper())
+                variations.add(spaced.lower())
+                variations.add(spaced.title())
+    
+    return list(variations)
+
+# Base terms for degrees
+BASE_TERMS = {
+    'bca': ['bca', 'b.c.a', 'b.ca'],
+    'mca': ['mca', 'm.c.a', 'm.ca'],
+    'btech': ['btech', 'b.tech', 'b tech'],
+    'mtech': ['mtech', 'm.tech', 'm tech'],
+    'be': ['be', 'b.e', 'b e'],
+    'me': ['me', 'm.e', 'm e'],
+    'bsc': ['bsc', 'b.sc', 'b sc'],
+    'msc': ['msc', 'm.sc', 'm sc'],
+    'bcom': ['bcom', 'b.com', 'b com'],
+    'mcom': ['mcom', 'm.com', 'm com'],
+    'bba': ['bba', 'b.b.a', 'b.ba'],
+    'mba': ['mba', 'm.b.a', 'm.ba'],
+    'ba': ['ba', 'b.a', 'b a'],
+    'ma': ['ma', 'm.a', 'm a'],
+    'phd': ['phd', 'ph.d', 'ph d'],
+}
+
+# Generate all variations
+DEGREE_VARIATIONS = {}
+for degree, base_terms in BASE_TERMS.items():
+    DEGREE_VARIATIONS[degree] = generate_case_variations(base_terms)
+
+# Define education degree mappings and patterns with all variations
 EDUCATION_PATTERNS = {
     'degrees': {
-        # Bachelor's degrees
+        # Bachelor's degrees with all variations
         'bachelor': [
-            'bachelor', 'bachelors', 'b.tech', 'btech', 'b.e', 'be', 'b.sc', 'bsc',
-            'bca', 'b.c.a', 'b.com', 'bcom', 'bba', 'b.b.a', 'ba', 'b.a',
-            'undergraduate', 'ug', 'bachelor of technology', 'bachelor of engineering',
-            'bachelor of science', 'bachelor of commerce', 'bachelor of arts',
-            'bachelor of business administration', 'bachelor of computer applications'
+            'bachelor', 'bachelors', 'bachelor\'s', 'Bachelor', 'Bachelors', 'BACHELOR', 'BACHELORS',
+            *DEGREE_VARIATIONS['bca'],    # BCA variations
+            *DEGREE_VARIATIONS['btech'],  # BTech variations
+            *DEGREE_VARIATIONS['be'],     # BE variations
+            *DEGREE_VARIATIONS['bsc'],    # BSc variations
+            *DEGREE_VARIATIONS['bcom'],   # BCom variations
+            *DEGREE_VARIATIONS['bba'],    # BBA variations
+            *DEGREE_VARIATIONS['ba'],     # BA variations
+            'undergraduate', 'Undergraduate', 'UNDERGRADUATE',
+            'ug', 'UG', 'u.g', 'U.G', 'u.g.', 'U.G.'
         ],
-        # Master's degrees
+        # Master's degrees with all variations
         'master': [
-            'master', 'masters', 'm.tech', 'mtech', 'm.e', 'me', 'm.sc', 'msc',
-            'mca', 'm.c.a', 'master in computer applications', 'master of computer applications',
-            'mba', 'm.b.a', 'ma', 'm.a', 'ms', 'm.s', 'm.com', 'mcom',
-            'postgraduate', 'pg', 'master of technology', 'master of engineering',
-            'master of science', 'master of commerce', 'master of arts',
-            'master of business administration'
+            'master', 'masters', 'master\'s', 'Master', 'Masters', 'MASTER', 'MASTERS',
+            *DEGREE_VARIATIONS['mca'],    # MCA variations
+            *DEGREE_VARIATIONS['mtech'],  # MTech variations
+            *DEGREE_VARIATIONS['me'],     # ME variations
+            *DEGREE_VARIATIONS['msc'],    # MSc variations
+            *DEGREE_VARIATIONS['mcom'],   # MCom variations
+            *DEGREE_VARIATIONS['mba'],    # MBA variations
+            *DEGREE_VARIATIONS['ma'],     # MA variations
+            'postgraduate', 'Postgraduate', 'POSTGRADUATE',
+            'pg', 'PG', 'p.g', 'P.G', 'p.g.', 'P.G.'
         ],
-        # Doctorate degrees
+        # Doctorate degrees with all variations
         'doctorate': [
-            'phd', 'ph.d', 'doctorate', 'doctor of philosophy'
-        ],
-        # Other qualifications
-        'other': [
-            'diploma', 'certification', 'certificate', 'associate degree',
-            'professional certification', 'post graduate diploma', 'pgd', 'pg diploma'
+            *DEGREE_VARIATIONS['phd'],
+            'doctorate', 'Doctorate', 'DOCTORATE',
+            'doctor of philosophy', 'Doctor of Philosophy', 'DOCTOR OF PHILOSOPHY'
         ]
     },
     'fields': {
-        # Technology and Engineering
+        # Technology and Engineering fields with variations
         'technology': [
-            'computer science', 'information technology', 'software engineering',
-            'computer engineering', 'electronics', 'electrical', 'mechanical',
-            'civil engineering', 'data science', 'artificial intelligence',
-            'machine learning', 'robotics', 'automation', 'mechatronics',
-            'information systems', 'web development', 'mobile development',
-            'cloud computing', 'cybersecurity', 'network engineering',
-            'telecommunications', 'embedded systems'
-        ],
-        # Business and Management
-        'business': [
-            'business administration', 'management', 'finance', 'marketing',
-            'accounting', 'economics', 'human resources', 'hr management',
-            'operations management', 'supply chain management', 'project management',
-            'international business', 'entrepreneurship', 'business analytics',
-            'digital marketing', 'e-commerce'
-        ],
-        # Science and Mathematics
-        'science': [
-            'mathematics', 'physics', 'chemistry', 'biology', 'statistics',
-            'applied mathematics', 'computational science', 'environmental science',
-            'biotechnology', 'bioinformatics', 'quantum computing', 'data analytics',
-            'applied physics', 'material science'
-        ],
-        # Arts and Humanities
-        'arts': [
-            'communication', 'english', 'literature', 'journalism', 'media studies',
-            'design', 'graphic design', 'ui/ux design', 'user interface design',
-            'user experience design', 'digital media', 'content creation',
-            'technical writing', 'creative writing'
+            'computer science', 'Computer Science', 'COMPUTER SCIENCE',
+            'cs', 'CS', 'c.s', 'C.S', 'c.s.', 'C.S.',
+            'cse', 'CSE', 'c.s.e', 'C.S.E', 'c.s.e.', 'C.S.E.',
+            'information technology', 'Information Technology', 'INFORMATION TECHNOLOGY',
+            'it', 'IT', 'i.t', 'I.T', 'i.t.', 'I.T.',
+            'software engineering', 'Software Engineering', 'SOFTWARE ENGINEERING',
+            'se', 'SE', 's.e', 'S.E', 's.e.', 'S.E.',
+            'computer engineering', 'Computer Engineering', 'COMPUTER ENGINEERING',
+            'ce', 'CE', 'c.e', 'C.E', 'c.e.', 'C.E.',
+            'electronics', 'Electronics', 'ELECTRONICS',
+            'ec', 'EC', 'e.c', 'E.C', 'e.c.', 'E.C.',
+            'electrical', 'Electrical', 'ELECTRICAL',
+            'ee', 'EE', 'e.e', 'E.E', 'e.e.', 'E.E.',
+            'mechanical', 'Mechanical', 'MECHANICAL',
+            'me', 'ME', 'm.e', 'M.E', 'm.e.', 'M.E.',
+            'civil engineering', 'Civil Engineering', 'CIVIL ENGINEERING',
+            'civil', 'Civil', 'CIVIL',
+            'data science', 'Data Science', 'DATA SCIENCE',
+            'ds', 'DS', 'd.s', 'D.S', 'd.s.', 'D.S.',
+            'artificial intelligence', 'Artificial Intelligence', 'ARTIFICIAL INTELLIGENCE',
+            'ai', 'AI', 'a.i', 'A.I', 'a.i.', 'A.I.',
+            'machine learning', 'Machine Learning', 'MACHINE LEARNING',
+            'ml', 'ML', 'm.l', 'M.L', 'm.l.', 'M.L.',
+            'robotics', 'Robotics', 'ROBOTICS',
+            'automation', 'Automation', 'AUTOMATION',
+            'information systems', 'Information Systems', 'INFORMATION SYSTEMS',
+            'is', 'IS', 'i.s', 'I.S', 'i.s.', 'I.S.',
+            'web development', 'Web Development', 'WEB DEVELOPMENT',
+            'web dev', 'Web Dev', 'WEB DEV',
+            'mobile development', 'Mobile Development', 'MOBILE DEVELOPMENT',
+            'app dev', 'App Dev', 'APP DEV',
+            'cloud computing', 'Cloud Computing', 'CLOUD COMPUTING',
+            'devops', 'DevOps', 'DEVOPS',
+            'cybersecurity', 'Cybersecurity', 'CYBERSECURITY',
+            'security', 'Security', 'SECURITY',
+            'network engineering', 'Network Engineering', 'NETWORK ENGINEERING',
+            'networking', 'Networking', 'NETWORKING'
         ]
-    },
-    'institutions': [
-        'university', 'college', 'institute', 'school', 'academy',
-        'polytechnic', 'global', 'international', 'national'
-    ],
-    'academic_terms': [
-        'cgpa', 'gpa', 'grade', 'academic', 'score', 'percentage',
-        'distinction', 'first class', 'second class', 'honors', 'honours'
-    ]
+    }
 }
 
-def normalize_education_term(term: str) -> str:
-    """Normalize education terms to standard forms."""
-    term = term.lower().strip()
+def clean_and_normalize_text(text: str) -> str:
+    """Clean and normalize text by removing extra spaces and normalizing dots."""
+    # Remove extra whitespace
+    text = ' '.join(text.split())
+    # Normalize dots in abbreviations (e.g., "b.tech" and "b. tech" -> "b.tech")
+    text = re.sub(r'\.\s+', '.', text)
+    return text
+
+def extract_education_info(text: str) -> List[str]:
+    """Extract education information from text with improved pattern matching."""
+    text = clean_and_normalize_text(text)
+    education_info = set()
     
-    # Check degree mappings
-    for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
-        if any(var in term for var in variations):
-            return degree_type
-            
-    # Check field mappings
-    for field_type, variations in EDUCATION_PATTERNS['fields'].items():
-        if any(var in term for var in variations):
-            return field_type
-            
-    return term
+    # Split text into sentences and process each one
+    sentences = [s.strip() for s in text.split('.') if s.strip()]
+    
+    for sentence in sentences:
+        # Try matching the original text and lowercase version
+        texts_to_check = [sentence, sentence.lower(), sentence.upper()]
+        
+        for check_text in texts_to_check:
+            # Look for degree patterns
+            for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
+                if any(variation in check_text for variation in variations):
+                    # Try to find the field of study
+                    for field_type, fields in EDUCATION_PATTERNS['fields'].items():
+                        if any(field in check_text for field in fields):
+                            education_info.add(f"{degree_type} in {field_type}")
+                            break
+                    else:
+                        # If no specific field found, just add the degree
+                        education_info.add(degree_type)
+                    break
+    
+    return list(education_info)
 
 def extract_keywords(text: str) -> Dict[str, List[str]]:
     """Extract important keywords from text using spaCy with improved education detection."""
@@ -175,30 +264,7 @@ def extract_keywords(text: str) -> Dict[str, List[str]]:
     }
     
     # Extract education information
-    education_info = set()
-    for sent in doc.sents:
-        sent_text = sent.text.lower()
-        
-        # Check for degree patterns
-        for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
-            if any(var in sent_text for var in variations):
-                # Try to extract the complete degree phrase
-                for field_type, fields in EDUCATION_PATTERNS['fields'].items():
-                    if any(field in sent_text for field in fields):
-                        education_info.add(f"{degree_type} in {field_type}")
-                        break
-                else:
-                    education_info.add(degree_type)
-        
-        # Check for institutions
-        if any(inst in sent_text for inst in EDUCATION_PATTERNS['institutions']):
-            education_info.add(sent_text.strip())
-            
-        # Check for academic terms
-        if any(term in sent_text for term in EDUCATION_PATTERNS['academic_terms']):
-            education_info.add(sent_text.strip())
-    
-    keywords['education'] = list(education_info)
+    keywords['education'] = extract_education_info(text)
     
     # Define soft skills patterns
     soft_skills_keywords = [
@@ -234,6 +300,22 @@ def extract_keywords(text: str) -> Dict[str, List[str]]:
         keywords[category] = [k.strip() for k in keywords[category] if len(k.strip()) > 2]
     
     return keywords
+
+def normalize_education_term(term: str) -> str:
+    """Normalize education terms to standard forms."""
+    term = term.lower().strip()
+    
+    # Check degree mappings
+    for degree_type, variations in EDUCATION_PATTERNS['degrees'].items():
+        if any(var in term for var in variations):
+            return degree_type
+            
+    # Check field mappings
+    for field_type, variations in EDUCATION_PATTERNS['fields'].items():
+        if any(var in term for var in variations):
+            return field_type
+            
+    return term
 
 def calculate_match_scores(resume_keywords: Dict[str, List[str]], job_keywords: Dict[str, List[str]]) -> Dict[str, float]:
     """Calculate match scores for different categories."""
